@@ -10,8 +10,10 @@ import com.intellij.openapi.progress.ProgressManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.ComponentWithBrowseButton;
 import com.intellij.pom.Navigatable;
-import com.intellij.psi.*;
-import com.intellij.psi.search.GlobalSearchScope;
+import com.intellij.psi.JavaPsiFacade;
+import com.intellij.psi.PsiClass;
+import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiReference;
 import com.intellij.psi.search.LocalSearchScope;
 import com.intellij.psi.search.ProjectScope;
 import com.intellij.psi.search.searches.ReferencesSearch;
@@ -20,6 +22,7 @@ import com.intellij.ui.CollectionListModel;
 import com.intellij.ui.ColoredListCellRenderer;
 import com.intellij.ui.EditorTextField;
 import com.jetbrains.unchain.BadDependencyItem;
+import com.jetbrains.unchain.PsiQNames;
 import com.jetbrains.unchain.Unchainer;
 
 import javax.swing.*;
@@ -135,38 +138,9 @@ public class UnchainPanel extends JPanel {
   }
 
   private void navigateToQName(final String qName) {
-    int hash = qName.indexOf('#');
-    String className = hash >= 0 ? qName.substring(0, hash) : qName;
-    PsiClass aClass = JavaPsiFacade.getInstance(myProject).findClass(className, GlobalSearchScope.projectScope(myProject));
-    if (aClass == null) {
+    PsiElement target = PsiQNames.findElementByQName(myProject, qName);
+    if (target == null) {
       return;
-    }
-    PsiElement target = aClass;
-    if (hash >= 0) {
-      String hashWithArgs = qName.substring(hash + 1);
-      String memberName = hashWithArgs;
-      int lparen = hashWithArgs.indexOf('(');
-      if (lparen > 0) {
-        memberName = hashWithArgs.substring(0, lparen);
-      }
-      PsiMethod[] methodsByName = aClass.findMethodsByName(memberName, false);
-      if (methodsByName.length > 0) {
-        for (PsiMethod psiMethod : methodsByName) {
-          if (Unchainer.getQName(psiMethod).equals(qName)) {
-            target = psiMethod;
-            break;
-          }
-        }
-        if (!(target instanceof PsiMethod)) {
-          target = methodsByName[0];
-        }
-      }
-      else {
-        PsiField field = aClass.findFieldByName(memberName, false);
-        if (field != null) {
-          target = field;
-        }
-      }
     }
 
     if (myCallChainList.getSelectedIndex() == myCallChainList.getModel().getSize() - 1) {

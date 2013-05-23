@@ -4,9 +4,7 @@ import com.intellij.openapi.module.Module;
 import com.intellij.openapi.module.ModuleUtil;
 import com.intellij.openapi.roots.ModuleRootManager;
 import com.intellij.openapi.util.Pair;
-import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.psi.*;
-import com.intellij.util.Function;
 import com.intellij.util.PairProcessor;
 import com.intellij.util.Processor;
 import com.intellij.util.containers.MultiMap;
@@ -33,7 +31,7 @@ public class Unchainer {
       if (prevItem != null) {
         myCallChain.addAll(prevItem.myCallChain);
       }
-      myCallChain.add(getQName(elementToAnalyze));
+      myCallChain.add(PsiQNames.getQName(elementToAnalyze));
       myElementToAnalyze = elementToAnalyze;
     }
   }
@@ -66,7 +64,7 @@ public class Unchainer {
   }
 
   private void analyze(final AnalysisItem item) {
-    String qName = getQName(item.myElementToAnalyze);
+    String qName = PsiQNames.getQName(item.myElementToAnalyze);
     if (myVisitedNames.contains(qName)) {
       return;
     }
@@ -135,40 +133,12 @@ public class Unchainer {
     });
   }
 
-  public static String getQName(PsiElement element) {
-    if (element instanceof PsiClass) {
-      return ((PsiClass) element).getQualifiedName();
-    }
-    if (element instanceof PsiMember) {
-      PsiMember member = (PsiMember) element;
-      PsiClass containingClass = member.getContainingClass();
-      String qName = containingClass.getQualifiedName() + "#" + member.getName();
-      if (member instanceof PsiMethod) {
-        PsiMethod[] methodsByName = containingClass.findMethodsByName(member.getName(), false);
-        if (methodsByName.length > 1) {
-          return qName + "(" + collectParameterTypes((PsiMethod) member) + ")";
-        }
-      }
-      return qName;
-    }
-    throw new UnsupportedOperationException("Don't know how to build qname for " + element);
-  }
-
-  private static String collectParameterTypes(PsiMethod method) {
-    return StringUtil.join(method.getParameterList().getParameters(), new Function<PsiParameter, String>() {
-      @Override
-      public String fun(PsiParameter psiParameter) {
-        return psiParameter.getType().getPresentableText();
-      }
-    }, ",");
-  }
-
   public List<BadDependencyItem> getBadDependencies() {
     List<BadDependencyItem> result = new ArrayList<BadDependencyItem>();
     for (Map.Entry<PsiElement, Collection<Pair<PsiElement, List<String>>>> entry : myBadDependencies.entrySet()) {
       Pair<PsiElement, List<String>> pair = entry.getValue().iterator().next();
       PsiElement usage = pair.first;
-      result.add(new BadDependencyItem(getQName(entry.getKey()), usage, pair.second));
+      result.add(new BadDependencyItem(PsiQNames.getQName(entry.getKey()), usage, pair.second));
     }
     return result;
   }
