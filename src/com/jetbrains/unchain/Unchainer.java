@@ -152,7 +152,7 @@ public class Unchainer {
     ArrayList<String> sortedNames = new ArrayList<String>(myVisitedNames);
     Collections.sort(sortedNames);
     for (String qName : sortedNames) {
-      if (qName.contains("#")) {
+      if (qName.contains("#") || qName.contains("@")) {
         String className = PsiQNames.extractClassName(qName);
         if (mergedClasses.contains(className) || result.contains(className)) {
           continue;
