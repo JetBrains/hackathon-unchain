@@ -4,7 +4,9 @@ import com.intellij.openapi.module.Module;
 import com.intellij.openapi.module.ModuleUtil;
 import com.intellij.openapi.roots.ModuleRootManager;
 import com.intellij.openapi.util.Pair;
+import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.psi.*;
+import com.intellij.util.Function;
 import com.intellij.util.PairProcessor;
 import com.intellij.util.Processor;
 import com.intellij.util.containers.MultiMap;
@@ -109,10 +111,14 @@ public class Unchainer {
       public void visitElement(PsiElement element) {
         super.visitElement(element);
         for (PsiReference ref: element.getReferences()) {
-          PsiElement result = ref.resolve();
-          if (result instanceof PsiClass || result instanceof PsiMember) {
-            processor.process(element, result);
-          }
+          processReference(element, ref);
+        }
+      }
+
+      private void processReference(PsiElement element, PsiReference ref) {
+        PsiElement result = ref.resolve();
+        if (result instanceof PsiClass || result instanceof PsiMember) {
+          processor.process(element, result);
         }
       }
 
@@ -120,27 +126,42 @@ public class Unchainer {
       public void visitReferenceExpression(PsiReferenceExpression expression) {
         PsiExpression qualifierExpression = expression.getQualifierExpression();
         if (qualifierExpression instanceof PsiJavaCodeReferenceElement && qualifierExpression.getReference().resolve() instanceof PsiClass) {
-          visitElement(expression.getElement());
+          processReference(expression, expression);
         }
         else {
-          super.visitElement(expression);
+          visitElement(expression);
         }
       }
     });
   }
 
-  private static String getQName(PsiElement element) {
+  public static String getQName(PsiElement element) {
     if (element instanceof PsiClass) {
       return ((PsiClass) element).getQualifiedName();
     }
     if (element instanceof PsiMember) {
       PsiMember member = (PsiMember) element;
       PsiClass containingClass = member.getContainingClass();
-      return containingClass.getQualifiedName() + "#" + member.getName();
+      String qName = containingClass.getQualifiedName() + "#" + member.getName();
+      if (member instanceof PsiMethod) {
+        PsiMethod[] methodsByName = containingClass.findMethodsByName(member.getName(), false);
+        if (methodsByName.length > 1) {
+          return qName + "(" + collectParameterTypes((PsiMethod) member) + ")";
+        }
+      }
+      return qName;
     }
     throw new UnsupportedOperationException("Don't know how to build qname for " + element);
   }
 
+  private static String collectParameterTypes(PsiMethod method) {
+    return StringUtil.join(method.getParameterList().getParameters(), new Function<PsiParameter, String>() {
+      @Override
+      public String fun(PsiParameter psiParameter) {
+        return psiParameter.getType().getPresentableText();
+      }
+    }, ",");
+  }
 
   public List<BadDependencyItem> getBadDependencies() {
     List<BadDependencyItem> result = new ArrayList<BadDependencyItem>();
@@ -152,4 +173,7 @@ public class Unchainer {
     return result;
   }
 
+  public Set<String> getVisitedNames() {
+    return myVisitedNames;
+  }
 }

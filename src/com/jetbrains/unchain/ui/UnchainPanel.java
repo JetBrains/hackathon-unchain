@@ -30,6 +30,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.ArrayList;
 import java.util.Arrays;
 
 /**
@@ -44,6 +45,7 @@ public class UnchainPanel extends JPanel {
   private JPanel myCardsPanel;
   private JList myBadDependenciesList;
   private JList myCallChainList;
+  private JList myGoodDepsList;
   private final EditorTextField myClassNameField;
 
   public UnchainPanel(final Project project) {
@@ -132,7 +134,7 @@ public class UnchainPanel extends JPanel {
 
   }
 
-  private void navigateToQName(String qName) {
+  private void navigateToQName(final String qName) {
     int hash = qName.indexOf('#');
     String className = hash >= 0 ? qName.substring(0, hash) : qName;
     PsiClass aClass = JavaPsiFacade.getInstance(myProject).findClass(className, GlobalSearchScope.projectScope(myProject));
@@ -141,12 +143,26 @@ public class UnchainPanel extends JPanel {
     }
     PsiElement target = aClass;
     if (hash >= 0) {
-      PsiMethod[] methodsByName = aClass.findMethodsByName(qName.substring(hash + 1), false);
+      String hashWithArgs = qName.substring(hash + 1);
+      String memberName = hashWithArgs;
+      int lparen = hashWithArgs.indexOf('(');
+      if (lparen > 0) {
+        memberName = hashWithArgs.substring(0, lparen);
+      }
+      PsiMethod[] methodsByName = aClass.findMethodsByName(memberName, false);
       if (methodsByName.length > 0) {
-        target = methodsByName[0];
+        for (PsiMethod psiMethod : methodsByName) {
+          if (Unchainer.getQName(psiMethod).equals(qName)) {
+            target = psiMethod;
+            break;
+          }
+        }
+        if (!(target instanceof PsiMethod)) {
+          target = methodsByName[0];
+        }
       }
       else {
-        PsiField field = aClass.findFieldByName(qName.substring(hash + 1), false);
+        PsiField field = aClass.findFieldByName(memberName, false);
         if (field != null) {
           target = field;
         }
@@ -175,7 +191,20 @@ public class UnchainPanel extends JPanel {
         unchainer.run();
       }
     }, "Analyzing Dependencies", true, myProject);
-    fillBadDependenciesList(unchainer);
+
+    CardLayout cardLayout = (CardLayout) myCardsPanel.getLayout();
+    if (unchainer.getBadDependencies().size() > 0) {
+      cardLayout.show(myCardsPanel, "BadDeps");
+      fillBadDependenciesList(unchainer);
+    }
+    else {
+      cardLayout.show(myCardsPanel, "GoodDeps");
+      fillGoodDependenciesList(unchainer);
+    }
+  }
+
+  private void fillGoodDependenciesList(Unchainer unchainer) {
+    myGoodDepsList.setModel(new CollectionListModel<String>(new ArrayList<String>(unchainer.getVisitedNames())));
   }
 
   private void fillBadDependenciesList(Unchainer unchainer) {
