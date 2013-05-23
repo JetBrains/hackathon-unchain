@@ -167,6 +167,12 @@ public class Unchainer {
           partialClasses.add(className);
         }
       }
+      else {
+        int dot = qName.lastIndexOf('.');
+        if (dot >= 0 && result.contains(qName.substring(0, dot))) {
+          continue;
+        }
+      }
       result.add(qName);
     }
     return result;

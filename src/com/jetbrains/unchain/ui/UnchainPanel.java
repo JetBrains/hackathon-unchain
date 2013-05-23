@@ -220,7 +220,7 @@ public class UnchainPanel extends JPanel {
     List<String> result = new ArrayList<String>();
     String classToMergeQName = PsiQNames.extractClassName(selectedMemberQName);
     for (String qName : qNames) {
-      if (PsiQNames.extractClassName(qName).equals(classToMergeQName)) {
+      if (qName.startsWith(classToMergeQName)) {
         if (!result.contains(classToMergeQName)) {
           result.add(classToMergeQName);
         }
