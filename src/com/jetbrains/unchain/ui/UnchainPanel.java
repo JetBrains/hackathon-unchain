@@ -20,6 +20,8 @@ import com.jetbrains.unchain.BadDependencyItem;
 import com.jetbrains.unchain.Unchainer;
 
 import javax.swing.*;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -38,6 +40,7 @@ public class UnchainPanel extends JPanel {
   private JButton myGoButton;
   private JPanel myCardsPanel;
   private JList myBadDependenciesList;
+  private JList myCallChainList;
   private final EditorTextField myClassNameField;
 
   public UnchainPanel(final Project project) {
@@ -81,6 +84,10 @@ public class UnchainPanel extends JPanel {
       }
     });
 
+    setupBadDependenciesListeners();
+  }
+
+  private void setupBadDependenciesListeners() {
     myBadDependenciesList.addMouseListener(new MouseAdapter() {
       @Override
       public void mouseClicked(MouseEvent mouseEvent) {
@@ -92,6 +99,15 @@ public class UnchainPanel extends JPanel {
               navigatable.navigate(true);
             }
           }
+        }
+      }
+    });
+    myBadDependenciesList.addListSelectionListener(new ListSelectionListener() {
+      @Override
+      public void valueChanged(ListSelectionEvent listSelectionEvent) {
+        BadDependencyItem selectedValue = (BadDependencyItem) myBadDependenciesList.getSelectedValue();
+        if (selectedValue != null) {
+          myCallChainList.setModel(new CollectionListModel<String>(selectedValue.getCallChain()));
         }
       }
     });
