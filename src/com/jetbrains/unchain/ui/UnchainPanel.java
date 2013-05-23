@@ -5,6 +5,7 @@ import com.intellij.ide.actions.CloseTabToolbarAction;
 import com.intellij.ide.util.TreeClassChooser;
 import com.intellij.ide.util.TreeClassChooserFactory;
 import com.intellij.openapi.actionSystem.*;
+import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.fileEditor.OpenFileDescriptor;
 import com.intellij.openapi.fileTypes.StdFileTypes;
 import com.intellij.openapi.module.Module;
@@ -12,6 +13,7 @@ import com.intellij.openapi.module.ModuleManager;
 import com.intellij.openapi.progress.ProgressManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.ComponentWithBrowseButton;
+import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.wm.ToolWindowManager;
 import com.intellij.pom.Navigatable;
 import com.intellij.psi.JavaPsiFacade;
@@ -24,6 +26,7 @@ import com.intellij.psi.search.searches.ReferencesSearch;
 import com.intellij.ui.*;
 import com.jetbrains.unchain.BadDependencyItem;
 import com.jetbrains.unchain.PsiQNames;
+import com.jetbrains.unchain.UnchainMover;
 import com.jetbrains.unchain.Unchainer;
 
 import javax.swing.*;
@@ -34,7 +37,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -50,6 +54,7 @@ public class UnchainPanel extends JPanel {
   private JList myBadDepsList;
   private JList myCallChainList;
   private JList myGoodDepsList;
+  private JButton myMoveClassesButton;
   private final EditorTextField myClassNameField;
   private boolean myGoodDepsVisible;
 
@@ -99,6 +104,12 @@ public class UnchainPanel extends JPanel {
     setupBadDependenciesListeners();
     setupCallChainListeners();
     setupGoodDependenciesListeners();
+    myMoveClassesButton.addActionListener(new ActionListener() {
+      @Override
+      public void actionPerformed(ActionEvent actionEvent) {
+        moveClasses();
+      }
+    });
   }
 
   private void createToolbar() {
@@ -230,6 +241,23 @@ public class UnchainPanel extends JPanel {
       }
     }
     return result;
+  }
+
+  private void moveClasses() {
+    Module selectedItem = (Module) myTargetModuleComboBox.getSelectedItem();
+    CollectionListModel<String> model = (CollectionListModel<String>) myGoodDepsList.getModel();
+    final UnchainMover mover = new UnchainMover(selectedItem, model.getItems());
+    new WriteCommandAction.Simple(myProject, "Moving classes to target module") {
+     @Override
+      protected void run() throws Throwable {
+        try {
+          mover.run();
+        }
+        catch (UnsupportedOperationException e) {
+          Messages.showErrorDialog(myProject, e.getMessage(), "Move Failed");
+        }
+      }
+    }.execute();
   }
 
   private class MergeAction extends AnAction {
