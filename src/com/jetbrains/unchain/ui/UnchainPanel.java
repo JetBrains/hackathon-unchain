@@ -310,7 +310,12 @@ public class UnchainPanel extends JPanel {
     @Override
     public void actionPerformed(AnActionEvent e) {
       myUnwantedDeps.add(PsiQNames.extractClassName((String) myCallChainList.getSelectedValue()));
+      int selIndex = myBadDepsList.getSelectedIndex();
       runUnchainer();
+      int size = myBadDepsList.getModel().getSize();
+      if (size > 0 && myBadDepsVisible) {
+        myBadDepsList.setSelectedIndex(selIndex >= size ? size - 1 : selIndex);
+      }
     }
 
     @Override

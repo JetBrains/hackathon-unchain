@@ -175,6 +175,12 @@ public class Unchainer {
       PsiElement usage = pair.first;
       result.add(new BadDependencyItem(PsiQNames.getQName(entry.getKey()), usage, pair.second));
     }
+    Collections.sort(result, new Comparator<BadDependencyItem>() {
+      @Override
+      public int compare(BadDependencyItem badDependencyItem, BadDependencyItem badDependencyItem2) {
+        return badDependencyItem.toString().compareTo(badDependencyItem2.toString());
+      }
+    });
     return result;
   }
 
