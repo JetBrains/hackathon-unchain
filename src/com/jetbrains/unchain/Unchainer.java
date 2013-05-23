@@ -105,7 +105,7 @@ public class Unchainer {
   }
 
   private void processDependencies(PsiElement element, final PairProcessor<PsiElement, PsiElement> processor) {
-    element.accept(new PsiRecursiveElementVisitor() {
+    element.accept(new JavaRecursiveElementVisitor() {
       @Override
       public void visitElement(PsiElement element) {
         super.visitElement(element);
@@ -114,6 +114,17 @@ public class Unchainer {
           if (result instanceof PsiClass || result instanceof PsiMember) {
             processor.process(element, result);
           }
+        }
+      }
+
+      @Override
+      public void visitReferenceExpression(PsiReferenceExpression expression) {
+        PsiExpression qualifierExpression = expression.getQualifierExpression();
+        if (qualifierExpression instanceof PsiJavaCodeReferenceElement && qualifierExpression.getReference().resolve() instanceof PsiClass) {
+          visitElement(expression.getElement());
+        }
+        else {
+          super.visitElement(expression);
         }
       }
     });
