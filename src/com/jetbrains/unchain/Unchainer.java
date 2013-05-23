@@ -157,7 +157,7 @@ public class Unchainer {
         if (mergedClasses.contains(className) || result.contains(className)) {
           continue;
         }
-        if (!partialClasses.contains(qName)) {
+        if (!partialClasses.contains(className)) {
           boolean seenAll = seenAllMembers(className);
           if (seenAll) {
             mergedClasses.add(className);
