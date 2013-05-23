@@ -1,0 +1,25 @@
+<idea-plugin version="2">
+  <id>com.jetbrains.unchain</id>
+  <name>Unchain Dependencies</name>
+  <version>1.0</version>
+  <vendor email="yole@jetbrains.com" url="http://www.jetbrains.com">JetBrains</vendor>
+
+  <!-- please see http://confluence.jetbrains.net/display/IDEADEV/Build+Number+Ranges for description -->
+  <idea-version since-build="129.1"/>
+
+  <!-- please see http://confluence.jetbrains.net/display/IDEADEV/Plugin+Compatibility+with+IntelliJ+Platform+Products
+       on how to target different products -->
+  <!-- uncomment to enable plugin in all products
+  <depends>com.intellij.modules.lang</depends>
+  -->
+
+  <actions>
+    <action id="Unchain" class="com.jetbrains.unchain.ui.UnchainAction" text="Analyze Dependency Chains">
+        <add-to-group group-id="AnalyzeActions" anchor="last"/>
+    </action>
+  </actions>
+
+  <extensions defaultExtensionNs="com.intellij">
+    <!-- Add your extensions here -->
+  </extensions>
+</idea-plugin>
