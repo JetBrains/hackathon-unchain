@@ -4,15 +4,24 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.psi.*;
 import com.intellij.psi.search.GlobalSearchScope;
+import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.util.Function;
 
 /**
  * @author yole
  */
 public class PsiQNames {
-  public static String getQName(PsiElement element) {
+  public static String getQName(final PsiElement element) {
     if (element instanceof PsiClass) {
-      return ((PsiClass) element).getQualifiedName();
+      String qualifiedName = ((PsiClass) element).getQualifiedName();
+      if (qualifiedName != null) {
+        return qualifiedName;
+      }
+      PsiClass topLevelClass = (PsiClass) element;
+      while (PsiTreeUtil.getParentOfType(topLevelClass, PsiClass.class) != null) {
+        topLevelClass = PsiTreeUtil.getParentOfType(topLevelClass, PsiClass.class);
+      }
+      return topLevelClass.getQualifiedName() + "@" + element.getTextRange().getStartOffset();
     }
     if (element instanceof PsiMember) {
       PsiMember member = (PsiMember) element;
@@ -38,40 +47,59 @@ public class PsiQNames {
     }, ",");
   }
 
+  public static PsiClass findClassByQName(Project project, String qName) {
+    String className = extractClassName(qName);
+    return JavaPsiFacade.getInstance(project).findClass(className, GlobalSearchScope.projectScope(project));
+  }
+
+  public static String extractClassName(String qName) {
+    int hash = StringUtil.indexOfAny(qName, "#@");
+    return hash >= 0 ? qName.substring(0, hash) : qName;
+  }
+
   public static PsiElement findElementByQName(Project project, String qName) {
-    int hash = qName.indexOf('#');
-    String className = hash >= 0 ? qName.substring(0, hash) : qName;
-    PsiClass aClass = JavaPsiFacade.getInstance(project).findClass(className, GlobalSearchScope.projectScope(project));
+    PsiClass aClass = findClassByQName(project, qName);
     if (aClass == null) {
       return null;
     }
+    int hash = StringUtil.indexOfAny(qName, "#@");
     PsiElement target = aClass;
     if (hash >= 0) {
-      String hashWithArgs = qName.substring(hash + 1);
-      String memberName = hashWithArgs;
-      int lparen = hashWithArgs.indexOf('(');
-      if (lparen > 0) {
-        memberName = hashWithArgs.substring(0, lparen);
-      }
-      PsiMethod[] methodsByName = aClass.findMethodsByName(memberName, false);
-      if (methodsByName.length > 0) {
-        for (PsiMethod psiMethod : methodsByName) {
-          if (getQName(psiMethod).equals(qName)) {
-            target = psiMethod;
-            break;
-          }
-        }
-        if (!(target instanceof PsiMethod)) {
-          target = methodsByName[0];
-        }
+      if (qName.charAt(hash) == '#') {
+        target = findByHash(qName, aClass, hash);
       }
       else {
-        PsiField field = aClass.findFieldByName(memberName, false);
-        if (field != null) {
-          target = field;
-        }
+        int offset = Integer.parseInt(qName.substring(hash+1));
+        target = PsiTreeUtil.getParentOfType(aClass.getContainingFile().findElementAt(offset), PsiClass.class, false);
       }
     }
     return target;
+  }
+
+  private static PsiElement findByHash(String qName, PsiClass aClass, int hash) {
+    String hashWithArgs = qName.substring(hash + 1);
+    String memberName = hashWithArgs;
+    int lparen = hashWithArgs.indexOf('(');
+    if (lparen > 0) {
+      memberName = hashWithArgs.substring(0, lparen);
+    }
+    PsiMethod[] methodsByName = aClass.findMethodsByName(memberName, false);
+    if (methodsByName.length > 0) {
+      for (PsiMethod psiMethod : methodsByName) {
+        if (getQName(psiMethod).equals(qName)) {
+          return psiMethod;
+        }
+      }
+      return methodsByName[0];
+    }
+    PsiField field = aClass.findFieldByName(memberName, false);
+    if (field != null) {
+      return field;
+    }
+    PsiClass innerClass = aClass.findInnerClassByName(memberName, false);
+    if (innerClass != null) {
+      return innerClass;
+    }
+    return aClass;
   }
 }

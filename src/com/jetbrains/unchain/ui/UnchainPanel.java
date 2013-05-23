@@ -33,7 +33,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.util.ArrayList;
 import java.util.Arrays;
 
 /**
@@ -178,7 +177,7 @@ public class UnchainPanel extends JPanel {
   }
 
   private void fillGoodDependenciesList(Unchainer unchainer) {
-    myGoodDepsList.setModel(new CollectionListModel<String>(new ArrayList<String>(unchainer.getVisitedNames())));
+    myGoodDepsList.setModel(new CollectionListModel<String>(unchainer.getGoodDependencies()));
   }
 
   private void fillBadDependenciesList(Unchainer unchainer) {

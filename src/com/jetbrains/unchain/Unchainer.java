@@ -2,9 +2,11 @@ package com.jetbrains.unchain;
 
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.module.ModuleUtil;
+import com.intellij.openapi.project.Project;
 import com.intellij.openapi.roots.ModuleRootManager;
 import com.intellij.openapi.util.Pair;
 import com.intellij.psi.*;
+import com.intellij.psi.search.ProjectScope;
 import com.intellij.util.PairProcessor;
 import com.intellij.util.Processor;
 import com.intellij.util.containers.MultiMap;
@@ -115,7 +117,7 @@ public class Unchainer {
 
       private void processReference(PsiElement element, PsiReference ref) {
         PsiElement result = ref.resolve();
-        if (result instanceof PsiClass || result instanceof PsiMember) {
+        if ((result instanceof PsiClass || result instanceof PsiMember) && !(result instanceof PsiTypeParameter)) {
           processor.process(element, result);
         }
       }
@@ -143,7 +145,51 @@ public class Unchainer {
     return result;
   }
 
-  public Set<String> getVisitedNames() {
-    return myVisitedNames;
+  public List<String> getGoodDependencies() {
+    List<String> result = new ArrayList<String>();
+    Set<String> mergedClasses = new HashSet<String>();
+    Set<String> partialClasses = new HashSet<String>();
+    ArrayList<String> sortedNames = new ArrayList<String>(myVisitedNames);
+    Collections.sort(sortedNames);
+    for (String qName : sortedNames) {
+      if (qName.contains("#")) {
+        String className = PsiQNames.extractClassName(qName);
+        if (mergedClasses.contains(className) || result.contains(className)) {
+          continue;
+        }
+        if (!partialClasses.contains(qName)) {
+          boolean seenAll = seenAllMembers(className);
+          if (seenAll) {
+            mergedClasses.add(className);
+            result.add(className);
+            continue;
+          }
+          partialClasses.add(className);
+        }
+      }
+      result.add(qName);
+    }
+    return result;
+  }
+
+  private boolean seenAllMembers(String className) {
+    Project project = myTargetModule.getProject();
+    PsiClass aClass = JavaPsiFacade.getInstance(project).findClass(className, ProjectScope.getProjectScope(project));
+    for (PsiMethod psiMethod : aClass.getMethods()) {
+      if (!psiMethod.isConstructor() && !myVisitedNames.contains(PsiQNames.getQName(psiMethod))) {
+        return false;
+      }
+    }
+    for (PsiField field : aClass.getFields()) {
+      if (!myVisitedNames.contains(PsiQNames.getQName(field))) {
+        return false;
+      }
+    }
+    for (PsiClass psiClass : aClass.getInnerClasses()) {
+      if (!myVisitedNames.contains(PsiQNames.getQName(psiClass))) {
+        return false;
+      }
+    }
+    return true;
   }
 }
