@@ -4,7 +4,6 @@ import com.intellij.openapi.module.Module;
 import com.intellij.openapi.module.ModuleUtil;
 import com.intellij.openapi.roots.ModuleRootManager;
 import com.intellij.openapi.util.Pair;
-import com.intellij.pom.Navigatable;
 import com.intellij.psi.*;
 import com.intellij.util.PairProcessor;
 import com.intellij.util.Processor;
@@ -148,8 +147,7 @@ public class Unchainer {
     for (Map.Entry<PsiElement, Collection<Pair<PsiElement, List<String>>>> entry : myBadDependencies.entrySet()) {
       Pair<PsiElement, List<String>> pair = entry.getValue().iterator().next();
       PsiElement usage = pair.first;
-      result.add(new BadDependencyItem(getQName(entry.getKey()), usage instanceof Navigatable ? (Navigatable) usage : null,
-          pair.second));
+      result.add(new BadDependencyItem(getQName(entry.getKey()), usage, pair.second));
     }
     return result;
   }

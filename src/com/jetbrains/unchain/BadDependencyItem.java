@@ -1,6 +1,7 @@
 package com.jetbrains.unchain;
 
 import com.intellij.pom.Navigatable;
+import com.intellij.psi.PsiElement;
 
 import java.util.List;
 
@@ -9,12 +10,12 @@ import java.util.List;
  */
 public class BadDependencyItem {
   private final String myText;
-  private final Navigatable myNavigatable;
+  private final PsiElement myPsiElement;
   private final List<String> myCallChain;
 
-  public BadDependencyItem(String text, Navigatable navigatable, List<String> callChain) {
+  public BadDependencyItem(String text, PsiElement element, List<String> callChain) {
     myText = text;
-    myNavigatable = navigatable;
+    myPsiElement = element;
     myCallChain = callChain;
   }
 
@@ -23,8 +24,12 @@ public class BadDependencyItem {
     return myText;
   }
 
+  public PsiElement getPsiElement() {
+    return myPsiElement;
+  }
+
   public Navigatable getNavigatable() {
-    return myNavigatable;
+    return myPsiElement instanceof Navigatable ? (Navigatable) myPsiElement : null;
   }
 
   public List<String> getCallChain() {

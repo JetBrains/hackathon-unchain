@@ -2,6 +2,7 @@ package com.jetbrains.unchain.ui;
 
 import com.intellij.ide.util.TreeClassChooser;
 import com.intellij.ide.util.TreeClassChooserFactory;
+import com.intellij.openapi.fileEditor.OpenFileDescriptor;
 import com.intellij.openapi.fileTypes.StdFileTypes;
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.module.ModuleManager;
@@ -9,9 +10,11 @@ import com.intellij.openapi.progress.ProgressManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.ComponentWithBrowseButton;
 import com.intellij.pom.Navigatable;
-import com.intellij.psi.JavaPsiFacade;
-import com.intellij.psi.PsiClass;
+import com.intellij.psi.*;
+import com.intellij.psi.search.GlobalSearchScope;
+import com.intellij.psi.search.LocalSearchScope;
 import com.intellij.psi.search.ProjectScope;
+import com.intellij.psi.search.searches.ReferencesSearch;
 import com.intellij.ui.CollectionComboBoxModel;
 import com.intellij.ui.CollectionListModel;
 import com.intellij.ui.ColoredListCellRenderer;
@@ -85,6 +88,7 @@ public class UnchainPanel extends JPanel {
     });
 
     setupBadDependenciesListeners();
+    setupCallChainListeners();
   }
 
   private void setupBadDependenciesListeners() {
@@ -111,6 +115,56 @@ public class UnchainPanel extends JPanel {
         }
       }
     });
+  }
+
+  private void setupCallChainListeners() {
+    myCallChainList.addMouseListener(new MouseAdapter() {
+      @Override
+      public void mouseClicked(MouseEvent mouseEvent) {
+        if (mouseEvent.getClickCount() == 2 && !mouseEvent.isPopupTrigger()) {
+          String qName = (String) myCallChainList.getSelectedValue();
+          if (qName != null) {
+            navigateToQName(qName);
+          }
+        }
+      }
+    });
+
+  }
+
+  private void navigateToQName(String qName) {
+    int hash = qName.indexOf('#');
+    String className = hash >= 0 ? qName.substring(0, hash) : qName;
+    PsiClass aClass = JavaPsiFacade.getInstance(myProject).findClass(className, GlobalSearchScope.projectScope(myProject));
+    if (aClass == null) {
+      return;
+    }
+    PsiElement target = aClass;
+    if (hash >= 0) {
+      PsiMethod[] methodsByName = aClass.findMethodsByName(qName.substring(hash + 1), false);
+      if (methodsByName.length > 0) {
+        target = methodsByName[0];
+      }
+      else {
+        PsiField field = aClass.findFieldByName(qName.substring(hash + 1), false);
+        if (field != null) {
+          target = field;
+        }
+      }
+    }
+
+    if (myCallChainList.getSelectedIndex() == myCallChainList.getModel().getSize() - 1) {
+      BadDependencyItem badDependency = (BadDependencyItem) myBadDependenciesList.getSelectedValue();
+      PsiReference reference = ReferencesSearch.search(badDependency.getPsiElement(), new LocalSearchScope(target)).findFirst();
+      if (reference != null) {
+        new OpenFileDescriptor(myProject, reference.getElement().getContainingFile().getVirtualFile(),
+            reference.getRangeInElement().getStartOffset() + reference.getElement().getTextRange().getStartOffset()).navigate(true);
+        return;
+      }
+    }
+    if (target instanceof Navigatable) {
+      ((Navigatable) target).navigate(true);
+    }
   }
 
   private void runUnchainer(PsiClass psiClass, Module module) {
