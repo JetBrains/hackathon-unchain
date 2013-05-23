@@ -13,7 +13,7 @@ import com.intellij.ui.content.ContentFactory;
  * @author yole
  */
 public class UnchainAction extends AnAction {
-  private static final String UNCHAIN_TOOLWINDOW_ID = "Unchain";
+  static final String UNCHAIN_TOOLWINDOW_ID = "Unchain";
 
   @Override
   public void actionPerformed(AnActionEvent anActionEvent) {

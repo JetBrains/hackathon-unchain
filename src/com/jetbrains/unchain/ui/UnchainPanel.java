@@ -1,7 +1,9 @@
 package com.jetbrains.unchain.ui;
 
+import com.intellij.ide.actions.CloseTabToolbarAction;
 import com.intellij.ide.util.TreeClassChooser;
 import com.intellij.ide.util.TreeClassChooserFactory;
+import com.intellij.openapi.actionSystem.*;
 import com.intellij.openapi.fileEditor.OpenFileDescriptor;
 import com.intellij.openapi.fileTypes.StdFileTypes;
 import com.intellij.openapi.module.Module;
@@ -9,6 +11,7 @@ import com.intellij.openapi.module.ModuleManager;
 import com.intellij.openapi.progress.ProgressManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.ComponentWithBrowseButton;
+import com.intellij.openapi.wm.ToolWindowManager;
 import com.intellij.pom.Navigatable;
 import com.intellij.psi.JavaPsiFacade;
 import com.intellij.psi.PsiClass;
@@ -52,6 +55,8 @@ public class UnchainPanel extends JPanel {
     setLayout(new BorderLayout());
     add(myMainPanel, BorderLayout.CENTER);
 
+    createToolbar();
+
     myClassNameField = new EditorTextField("", project, StdFileTypes.JAVA);
     ComponentWithBrowseButton<EditorTextField> classNameWithBrowseButton = new ComponentWithBrowseButton<EditorTextField>(myClassNameField, new ActionListener() {
       @Override
@@ -91,6 +96,18 @@ public class UnchainPanel extends JPanel {
     setupBadDependenciesListeners();
     setupCallChainListeners();
     setupGoodDependenciesListeners();
+  }
+
+  private void createToolbar() {
+    DefaultActionGroup group = new DefaultActionGroup();
+    group.add(new CloseTabToolbarAction() {
+      @Override
+      public void actionPerformed(AnActionEvent e) {
+        ToolWindowManager.getInstance(myProject).unregisterToolWindow(UnchainAction.UNCHAIN_TOOLWINDOW_ID);
+      }
+    });
+    ActionToolbar toolbar = ActionManager.getInstance().createActionToolbar(ActionPlaces.UNKNOWN, group, true);
+    add(toolbar.getComponent(), BorderLayout.NORTH);
   }
 
   private void setupBadDependenciesListeners() {
