@@ -15,6 +15,7 @@ import com.intellij.openapi.progress.ProgressManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.ComponentWithBrowseButton;
 import com.intellij.openapi.ui.Messages;
+import com.intellij.openapi.util.Ref;
 import com.intellij.openapi.wm.ToolWindowManager;
 import com.intellij.pom.Navigatable;
 import com.intellij.psi.*;
@@ -224,17 +225,26 @@ public class UnchainPanel extends JPanel {
       }
     }, "Analyzing Dependencies", true, myProject);
 
+    boolean haveBadDeps = unchainer.getBadDependencies().size() > 0;
+    showDepsCard(haveBadDeps);
+    if (haveBadDeps) {
+      fillBadDependenciesList(unchainer);
+    }
+    else {
+      fillGoodDependenciesList(unchainer);
+    }
+  }
+
+  private void showDepsCard(boolean bad) {
     myGoodDepsVisible = false;
     myBadDepsVisible = false;
     CardLayout cardLayout = (CardLayout) myCardsPanel.getLayout();
-    if (unchainer.getBadDependencies().size() > 0) {
+    if (bad) {
       cardLayout.show(myCardsPanel, "BadDeps");
-      fillBadDependenciesList(unchainer);
       myBadDepsVisible = true;
     }
     else {
       cardLayout.show(myCardsPanel, "GoodDeps");
-      fillGoodDependenciesList(unchainer);
       myGoodDepsVisible = true;
     }
   }
@@ -271,6 +281,7 @@ public class UnchainPanel extends JPanel {
     Module selectedItem = (Module) myTargetModuleComboBox.getSelectedItem();
     CollectionListModel<String> model = (CollectionListModel<String>) myGoodDepsList.getModel();
     final UnchainMover mover = new UnchainMover(selectedItem, model.getItems());
+    final Ref<Boolean> failed = Ref.create(false);
     new WriteCommandAction.Simple(myProject, "Moving classes to target module") {
      @Override
       protected void run() throws Throwable {
@@ -279,9 +290,17 @@ public class UnchainPanel extends JPanel {
         }
         catch (UnsupportedOperationException e) {
           Messages.showErrorDialog(myProject, e.getMessage(), "Move Failed");
+          failed.set(true);
         }
       }
     }.execute();
+
+    if (!failed.get()) {
+      myClassNameField.setText("");
+      ((CollectionListModel) myBadDepsList.getModel()).removeAll();
+      ((CollectionListModel) myCallChainList.getModel()).removeAll();
+      showDepsCard(true);
+    }
   }
 
   private class MergeAction extends AnAction {
@@ -293,7 +312,6 @@ public class UnchainPanel extends JPanel {
     public void actionPerformed(AnActionEvent e) {
       CollectionListModel<String> model = (CollectionListModel<String>) myGoodDepsList.getModel();
       model.replaceAll(mergeMembers(model.getItems(), (String) myGoodDepsList.getSelectedValue()));
-
     }
 
     @Override
