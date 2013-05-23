@@ -10,16 +10,14 @@ import com.intellij.openapi.fileEditor.OpenFileDescriptor;
 import com.intellij.openapi.fileTypes.StdFileTypes;
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.module.ModuleManager;
+import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.progress.ProgressManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.ComponentWithBrowseButton;
 import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.wm.ToolWindowManager;
 import com.intellij.pom.Navigatable;
-import com.intellij.psi.JavaPsiFacade;
-import com.intellij.psi.PsiClass;
-import com.intellij.psi.PsiElement;
-import com.intellij.psi.PsiReference;
+import com.intellij.psi.*;
 import com.intellij.psi.search.LocalSearchScope;
 import com.intellij.psi.search.ProjectScope;
 import com.intellij.psi.search.searches.ReferencesSearch;
@@ -66,6 +64,12 @@ public class UnchainPanel extends JPanel {
     createToolbar();
 
     myClassNameField = new EditorTextField("", project, StdFileTypes.JAVA);
+
+    final JavaCodeFragmentFactory factory = JavaCodeFragmentFactory.getInstance(myProject);
+    PsiPackage defaultPackage = JavaPsiFacade.getInstance(myProject).findPackage("");
+    final PsiCodeFragment fragment = factory.createReferenceCodeFragment("", defaultPackage, true, true);
+    myClassNameField.setDocument(PsiDocumentManager.getInstance(myProject).getDocument(fragment));
+
     ComponentWithBrowseButton<EditorTextField> classNameWithBrowseButton = new ComponentWithBrowseButton<EditorTextField>(myClassNameField, new ActionListener() {
       @Override
       public void actionPerformed(ActionEvent actionEvent) {
@@ -195,9 +199,19 @@ public class UnchainPanel extends JPanel {
 
   private void runUnchainer(PsiClass psiClass, Module module) {
     final Unchainer unchainer = new Unchainer(psiClass, module);
+    unchainer.setBadDependencyFoundCallback(new Runnable() {
+      @Override
+      public void run() {
+        ProgressIndicator indicator = ProgressManager.getInstance().getProgressIndicator();
+        indicator.setText2("Found " + unchainer.getBadDependencyCount() + " bad dependencies");
+      }
+    });
     ProgressManager.getInstance().runProcessWithProgressSynchronously(new Runnable() {
       @Override
       public void run() {
+        ProgressIndicator indicator = ProgressManager.getInstance().getProgressIndicator();
+        indicator.setIndeterminate(true);
+        indicator.setText2("Found no bad dependencies");
         unchainer.run();
       }
     }, "Analyzing Dependencies", true, myProject);

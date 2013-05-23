@@ -24,6 +24,7 @@ public class Unchainer {
   private final Set<String> myVisitedNames = new HashSet<String>();
   private final Queue<AnalysisItem> myAnalysisQueue = new ArrayDeque<AnalysisItem>();
   private final MultiMap<PsiElement, Pair<PsiElement, List<String>>> myBadDependencies = new MultiMap<PsiElement, Pair<PsiElement, List<String>>>();
+  private Runnable myBadDependencyFoundCallback;
 
   private static class AnalysisItem {
     private final List<String> myCallChain = new ArrayList<String>();
@@ -55,6 +56,10 @@ public class Unchainer {
         return true;
       }
     });
+  }
+
+  public void setBadDependencyFoundCallback(Runnable badDependencyFoundCallback) {
+    myBadDependencyFoundCallback = badDependencyFoundCallback;
   }
 
   public void run() {
@@ -89,6 +94,9 @@ public class Unchainer {
             while(((PsiMember) dependency).getContainingClass() != null) {
               dependency = ((PsiMember) dependency).getContainingClass();
             }
+          }
+          if (myBadDependencyFoundCallback != null) {
+            myBadDependencyFoundCallback.run();
           }
           myBadDependencies.putValue(dependency, Pair.create(referencingElement, item.myCallChain));
         }
@@ -133,6 +141,10 @@ public class Unchainer {
         }
       }
     });
+  }
+
+  public int getBadDependencyCount() {
+    return myBadDependencies.keySet().size();
   }
 
   public List<BadDependencyItem> getBadDependencies() {
