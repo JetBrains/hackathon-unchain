@@ -54,7 +54,9 @@ public class UnchainPanel extends JPanel {
   private JList myGoodDepsList;
   private JButton myMoveClassesButton;
   private final EditorTextField myClassNameField;
+  private boolean myBadDepsVisible;
   private boolean myGoodDepsVisible;
+  private final List<String> myUnwantedDeps = new ArrayList<String>();
 
   public UnchainPanel(final Project project) {
     myProject = project;
@@ -97,11 +99,7 @@ public class UnchainPanel extends JPanel {
     myGoButton.addActionListener(new ActionListener() {
       @Override
       public void actionPerformed(ActionEvent actionEvent) {
-        PsiClass psiClass = getSelectedClass();
-        Module module = (Module) myTargetModuleComboBox.getSelectedItem();
-        if (psiClass != null && module != null) {
-          runUnchainer(psiClass, module);
-        }
+        runUnchainer();
       }
     });
 
@@ -125,6 +123,7 @@ public class UnchainPanel extends JPanel {
       }
     });
     group.add(new MergeAction());
+    group.add(new MarkUnwantedAction());
     ActionToolbar toolbar = ActionManager.getInstance().createActionToolbar(ActionPlaces.UNKNOWN, group, true);
     add(toolbar.getComponent(), BorderLayout.NORTH);
   }
@@ -197,8 +196,17 @@ public class UnchainPanel extends JPanel {
     }
   }
 
+  private void runUnchainer() {
+    PsiClass psiClass = getSelectedClass();
+    Module module = (Module) myTargetModuleComboBox.getSelectedItem();
+    if (psiClass != null && module != null) {
+      runUnchainer(psiClass, module);
+    }
+  }
+
   private void runUnchainer(PsiClass psiClass, Module module) {
     final Unchainer unchainer = new Unchainer(psiClass, module);
+    unchainer.setUnwantedDependencies(myUnwantedDeps);
     unchainer.setBadDependencyFoundCallback(new Runnable() {
       @Override
       public void run() {
@@ -217,10 +225,12 @@ public class UnchainPanel extends JPanel {
     }, "Analyzing Dependencies", true, myProject);
 
     myGoodDepsVisible = false;
+    myBadDepsVisible = false;
     CardLayout cardLayout = (CardLayout) myCardsPanel.getLayout();
     if (unchainer.getBadDependencies().size() > 0) {
       cardLayout.show(myCardsPanel, "BadDeps");
       fillBadDependenciesList(unchainer);
+      myBadDepsVisible = true;
     }
     else {
       cardLayout.show(myCardsPanel, "GoodDeps");
@@ -289,6 +299,23 @@ public class UnchainPanel extends JPanel {
     @Override
     public void update(AnActionEvent e) {
       e.getPresentation().setEnabled(myGoodDepsVisible && myGoodDepsList.getSelectedValue() != null);
+    }
+  }
+
+  private class MarkUnwantedAction extends AnAction {
+    private MarkUnwantedAction() {
+      super("Mark Unwanted", "Mark selected class as an unwanted dependency", AllIcons.Actions.Menu_cut);
+    }
+
+    @Override
+    public void actionPerformed(AnActionEvent e) {
+      myUnwantedDeps.add(PsiQNames.extractClassName((String) myCallChainList.getSelectedValue()));
+      runUnchainer();
+    }
+
+    @Override
+    public void update(AnActionEvent e) {
+      e.getPresentation().setEnabled(myBadDepsVisible && myCallChainList.getSelectedValue() != null);
     }
   }
 }

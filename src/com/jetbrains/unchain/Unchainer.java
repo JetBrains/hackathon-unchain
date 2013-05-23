@@ -7,6 +7,7 @@ import com.intellij.openapi.roots.ModuleRootManager;
 import com.intellij.openapi.util.Pair;
 import com.intellij.psi.*;
 import com.intellij.psi.search.ProjectScope;
+import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.util.PairProcessor;
 import com.intellij.util.Processor;
 import com.intellij.util.containers.MultiMap;
@@ -25,6 +26,7 @@ public class Unchainer {
   private final Queue<AnalysisItem> myAnalysisQueue = new ArrayDeque<AnalysisItem>();
   private final MultiMap<PsiElement, Pair<PsiElement, List<String>>> myBadDependencies = new MultiMap<PsiElement, Pair<PsiElement, List<String>>>();
   private Runnable myBadDependencyFoundCallback;
+  private List<String> myUnwantedDependencies;
 
   private static class AnalysisItem {
     private final List<String> myCallChain = new ArrayList<String>();
@@ -62,6 +64,10 @@ public class Unchainer {
     myBadDependencyFoundCallback = badDependencyFoundCallback;
   }
 
+  public void setUnwantedDependencies(List<String> unwantedDependencies) {
+    myUnwantedDependencies = unwantedDependencies;
+  }
+
   public void run() {
     myAnalysisQueue.add(new AnalysisItem(myPsiClass, null));
     while (!myAnalysisQueue.isEmpty()) {
@@ -81,15 +87,8 @@ public class Unchainer {
       @Override
       public boolean process(PsiElement referencingElement, PsiElement dependency) {
         Module module = ModuleUtil.findModuleForPsiElement(dependency);
-        if (module == mySourceModule) {
-          if (isNonStaticMember(dependency)) {
-            myAnalysisQueue.offer(new AnalysisItem(((PsiMember) dependency).getContainingClass(), item));
-          }
-          else {
-            myAnalysisQueue.offer(new AnalysisItem(dependency, item));
-          }
-        }
-        else if (module != null && !myAllowedDependencies.contains(module)) {
+        if (module != null && (module != mySourceModule && !myAllowedDependencies.contains(module) ||
+            isUnwantedDependency(dependency))) {
           if (dependency instanceof PsiMember) {
             while(((PsiMember) dependency).getContainingClass() != null) {
               dependency = ((PsiMember) dependency).getContainingClass();
@@ -100,9 +99,31 @@ public class Unchainer {
           }
           myBadDependencies.putValue(dependency, Pair.create(referencingElement, item.myCallChain));
         }
+        else if (module == mySourceModule) {
+          if (isNonStaticMember(dependency)) {
+            myAnalysisQueue.offer(new AnalysisItem(((PsiMember) dependency).getContainingClass(), item));
+          }
+          else {
+            myAnalysisQueue.offer(new AnalysisItem(dependency, item));
+          }
+        }
         return true;
       }
     });
+  }
+
+  private boolean isUnwantedDependency(PsiElement dependency) {
+    if (myUnwantedDependencies.size() == 0) {
+      return false;
+    }
+    PsiClass psiClass = PsiTreeUtil.getParentOfType(dependency, PsiClass.class, false);
+    while (psiClass != null) {
+      if (myUnwantedDependencies.contains(psiClass.getQualifiedName())) {
+        return true;
+      }
+      psiClass = PsiTreeUtil.getParentOfType(psiClass, PsiClass.class);
+    }
+    return false;
   }
 
   private static boolean isNonStaticMember(PsiElement dependency) {
