@@ -23,6 +23,7 @@ import com.intellij.psi.search.LocalSearchScope;
 import com.intellij.psi.search.ProjectScope;
 import com.intellij.psi.search.searches.ReferencesSearch;
 import com.intellij.ui.*;
+import com.intellij.ui.components.JBList;
 import com.jetbrains.unchain.BadDependencyItem;
 import com.jetbrains.unchain.PsiQNames;
 import com.jetbrains.unchain.UnchainMover;
@@ -50,8 +51,8 @@ public class UnchainPanel extends JPanel {
   private JComboBox myTargetModuleComboBox;
   private JButton myGoButton;
   private JPanel myCardsPanel;
-  private JList myBadDepsList;
-  private JList myCallChainList;
+  private JBList myBadDepsList;
+  private JBList myCallChainList;
   private JList myGoodDepsList;
   private JButton myMoveClassesButton;
   private final EditorTextField myClassNameField;
@@ -63,6 +64,8 @@ public class UnchainPanel extends JPanel {
     myProject = project;
     setLayout(new BorderLayout());
     add(myMainPanel, BorderLayout.CENTER);
+
+    myBadDepsList.getEmptyText().setText("Select class to analyze and press Go");
 
     createToolbar();
 

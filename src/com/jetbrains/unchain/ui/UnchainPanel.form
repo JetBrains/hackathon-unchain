@@ -69,7 +69,7 @@
                 <properties/>
                 <border type="none"/>
                 <children>
-                  <component id="bee80" class="javax.swing.JList" binding="myBadDepsList">
+                  <component id="2e136" class="com.intellij.ui.components.JBList" binding="myBadDepsList">
                     <constraints/>
                     <properties/>
                   </component>
@@ -82,7 +82,7 @@
                 <properties/>
                 <border type="none"/>
                 <children>
-                  <component id="c82d2" class="javax.swing.JList" binding="myCallChainList">
+                  <component id="5067f" class="com.intellij.ui.components.JBList" binding="myCallChainList">
                     <constraints/>
                     <properties/>
                   </component>
