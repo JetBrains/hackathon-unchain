@@ -17,10 +17,7 @@ import com.intellij.psi.PsiReference;
 import com.intellij.psi.search.LocalSearchScope;
 import com.intellij.psi.search.ProjectScope;
 import com.intellij.psi.search.searches.ReferencesSearch;
-import com.intellij.ui.CollectionComboBoxModel;
-import com.intellij.ui.CollectionListModel;
-import com.intellij.ui.ColoredListCellRenderer;
-import com.intellij.ui.EditorTextField;
+import com.intellij.ui.*;
 import com.jetbrains.unchain.BadDependencyItem;
 import com.jetbrains.unchain.PsiQNames;
 import com.jetbrains.unchain.Unchainer;
@@ -93,6 +90,7 @@ public class UnchainPanel extends JPanel {
 
     setupBadDependenciesListeners();
     setupCallChainListeners();
+    setupGoodDependenciesListeners();
   }
 
   private void setupBadDependenciesListeners() {
@@ -122,27 +120,34 @@ public class UnchainPanel extends JPanel {
   }
 
   private void setupCallChainListeners() {
-    myCallChainList.addMouseListener(new MouseAdapter() {
+    new DoubleClickListener() {
       @Override
-      public void mouseClicked(MouseEvent mouseEvent) {
-        if (mouseEvent.getClickCount() == 2 && !mouseEvent.isPopupTrigger()) {
-          String qName = (String) myCallChainList.getSelectedValue();
-          if (qName != null) {
-            navigateToQName(qName);
-          }
-        }
+      protected boolean onDoubleClick(MouseEvent event) {
+        String qName = (String) myCallChainList.getSelectedValue();
+        PsiElement target = PsiQNames.findElementByQName(myProject, qName);
+        navigateToReference(target);
+        return true;
       }
-    });
-
+    }.installOn(myCallChainList);
   }
 
-  private void navigateToQName(final String qName) {
-    PsiElement target = PsiQNames.findElementByQName(myProject, qName);
-    if (target == null) {
-      return;
-    }
+  private void setupGoodDependenciesListeners() {
+    new DoubleClickListener() {
+      @Override
+      protected boolean onDoubleClick(MouseEvent event) {
+        String qName = (String) myGoodDepsList.getSelectedValue();
+        PsiElement target = PsiQNames.findElementByQName(myProject, qName);
+        if (target instanceof Navigatable) {
+          ((Navigatable) target).navigate(true);
+        }
+        return true;
+      }
+    }.installOn(myGoodDepsList);
+  }
 
-    if (myCallChainList.getSelectedIndex() == myCallChainList.getModel().getSize() - 1) {
+
+  private void navigateToReference(PsiElement target) {
+    if (target != null && myCallChainList.getSelectedIndex() == myCallChainList.getModel().getSize() - 1) {
       BadDependencyItem badDependency = (BadDependencyItem) myBadDependenciesList.getSelectedValue();
       PsiReference reference = ReferencesSearch.search(badDependency.getPsiElement(), new LocalSearchScope(target)).findFirst();
       if (reference != null) {

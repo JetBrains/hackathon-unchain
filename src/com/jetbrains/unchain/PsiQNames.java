@@ -58,6 +58,9 @@ public class PsiQNames {
   }
 
   public static PsiElement findElementByQName(Project project, String qName) {
+    if (qName == null) {
+      return null;
+    }
     PsiClass aClass = findClassByQName(project, qName);
     if (aClass == null) {
       return null;
@@ -67,9 +70,8 @@ public class PsiQNames {
     if (hash >= 0) {
       if (qName.charAt(hash) == '#') {
         target = findByHash(qName, aClass, hash);
-      }
-      else {
-        int offset = Integer.parseInt(qName.substring(hash+1));
+      } else {
+        int offset = Integer.parseInt(qName.substring(hash + 1));
         target = PsiTreeUtil.getParentOfType(aClass.getContainingFile().findElementAt(offset), PsiClass.class, false);
       }
     }
