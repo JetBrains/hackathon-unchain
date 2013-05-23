@@ -1,5 +1,6 @@
 package com.jetbrains.unchain.ui;
 
+import com.intellij.icons.AllIcons;
 import com.intellij.ide.actions.CloseTabToolbarAction;
 import com.intellij.ide.util.TreeClassChooser;
 import com.intellij.ide.util.TreeClassChooserFactory;
@@ -33,7 +34,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.util.Arrays;
+import java.util.*;
+import java.util.List;
 
 /**
  * @author yole
@@ -45,10 +47,11 @@ public class UnchainPanel extends JPanel {
   private JComboBox myTargetModuleComboBox;
   private JButton myGoButton;
   private JPanel myCardsPanel;
-  private JList myBadDependenciesList;
+  private JList myBadDepsList;
   private JList myCallChainList;
   private JList myGoodDepsList;
   private final EditorTextField myClassNameField;
+  private boolean myGoodDepsVisible;
 
   public UnchainPanel(final Project project) {
     myProject = project;
@@ -106,16 +109,17 @@ public class UnchainPanel extends JPanel {
         ToolWindowManager.getInstance(myProject).unregisterToolWindow(UnchainAction.UNCHAIN_TOOLWINDOW_ID);
       }
     });
+    group.add(new MergeAction());
     ActionToolbar toolbar = ActionManager.getInstance().createActionToolbar(ActionPlaces.UNKNOWN, group, true);
     add(toolbar.getComponent(), BorderLayout.NORTH);
   }
 
   private void setupBadDependenciesListeners() {
-    myBadDependenciesList.addMouseListener(new MouseAdapter() {
+    myBadDepsList.addMouseListener(new MouseAdapter() {
       @Override
       public void mouseClicked(MouseEvent mouseEvent) {
         if (mouseEvent.getClickCount() == 2 && !mouseEvent.isPopupTrigger()) {
-          BadDependencyItem selectedValue = (BadDependencyItem) myBadDependenciesList.getSelectedValue();
+          BadDependencyItem selectedValue = (BadDependencyItem) myBadDepsList.getSelectedValue();
           if (selectedValue != null) {
             Navigatable navigatable = selectedValue.getNavigatable();
             if (navigatable != null) {
@@ -125,10 +129,10 @@ public class UnchainPanel extends JPanel {
         }
       }
     });
-    myBadDependenciesList.addListSelectionListener(new ListSelectionListener() {
+    myBadDepsList.addListSelectionListener(new ListSelectionListener() {
       @Override
       public void valueChanged(ListSelectionEvent listSelectionEvent) {
-        BadDependencyItem selectedValue = (BadDependencyItem) myBadDependenciesList.getSelectedValue();
+        BadDependencyItem selectedValue = (BadDependencyItem) myBadDepsList.getSelectedValue();
         if (selectedValue != null) {
           myCallChainList.setModel(new CollectionListModel<String>(selectedValue.getCallChain()));
         }
@@ -165,7 +169,7 @@ public class UnchainPanel extends JPanel {
 
   private void navigateToReference(PsiElement target) {
     if (target != null && myCallChainList.getSelectedIndex() == myCallChainList.getModel().getSize() - 1) {
-      BadDependencyItem badDependency = (BadDependencyItem) myBadDependenciesList.getSelectedValue();
+      BadDependencyItem badDependency = (BadDependencyItem) myBadDepsList.getSelectedValue();
       PsiReference reference = ReferencesSearch.search(badDependency.getPsiElement(), new LocalSearchScope(target)).findFirst();
       if (reference != null) {
         new OpenFileDescriptor(myProject, reference.getElement().getContainingFile().getVirtualFile(),
@@ -187,6 +191,7 @@ public class UnchainPanel extends JPanel {
       }
     }, "Analyzing Dependencies", true, myProject);
 
+    myGoodDepsVisible = false;
     CardLayout cardLayout = (CardLayout) myCardsPanel.getLayout();
     if (unchainer.getBadDependencies().size() > 0) {
       cardLayout.show(myCardsPanel, "BadDeps");
@@ -195,6 +200,7 @@ public class UnchainPanel extends JPanel {
     else {
       cardLayout.show(myCardsPanel, "GoodDeps");
       fillGoodDependenciesList(unchainer);
+      myGoodDepsVisible = true;
     }
   }
 
@@ -203,10 +209,44 @@ public class UnchainPanel extends JPanel {
   }
 
   private void fillBadDependenciesList(Unchainer unchainer) {
-    myBadDependenciesList.setModel(new CollectionListModel<BadDependencyItem>(unchainer.getBadDependencies()));
+    myBadDepsList.setModel(new CollectionListModel<BadDependencyItem>(unchainer.getBadDependencies()));
   }
 
   private PsiClass getSelectedClass() {
     return JavaPsiFacade.getInstance(myProject).findClass(myClassNameField.getText(), ProjectScope.getProjectScope(myProject));
+  }
+
+  private List<String> mergeMembers(List<String> qNames, String selectedMemberQName) {
+    List<String> result = new ArrayList<String>();
+    String classToMergeQName = PsiQNames.extractClassName(selectedMemberQName);
+    for (String qName : qNames) {
+      if (PsiQNames.extractClassName(qName).equals(classToMergeQName)) {
+        if (!result.contains(classToMergeQName)) {
+          result.add(classToMergeQName);
+        }
+      }
+      else {
+        result.add(qName);
+      }
+    }
+    return result;
+  }
+
+  private class MergeAction extends AnAction {
+    public MergeAction() {
+      super("Merge", "Move all methods of selected class to target module", AllIcons.Modules.Merge);
+    }
+
+    @Override
+    public void actionPerformed(AnActionEvent e) {
+      CollectionListModel<String> model = (CollectionListModel<String>) myGoodDepsList.getModel();
+      model.replaceAll(mergeMembers(model.getItems(), (String) myGoodDepsList.getSelectedValue()));
+
+    }
+
+    @Override
+    public void update(AnActionEvent e) {
+      e.getPresentation().setEnabled(myGoodDepsVisible && myGoodDepsList.getSelectedValue() != null);
+    }
   }
 }

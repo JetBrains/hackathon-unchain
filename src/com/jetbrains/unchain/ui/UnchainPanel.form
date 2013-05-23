@@ -69,7 +69,7 @@
                 <properties/>
                 <border type="none"/>
                 <children>
-                  <component id="bee80" class="javax.swing.JList" binding="myBadDependenciesList">
+                  <component id="bee80" class="javax.swing.JList" binding="myBadDepsList">
                     <constraints/>
                     <properties/>
                   </component>
