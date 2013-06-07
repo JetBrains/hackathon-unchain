@@ -60,7 +60,7 @@ public class UnchainPanel extends JPanel {
   private boolean myGoodDepsVisible;
   private final List<String> myUnwantedDeps = new ArrayList<String>();
 
-  public UnchainPanel(final Project project) {
+  public UnchainPanel(final Project project, final PsiClass initialClass) {
     myProject = project;
     setLayout(new BorderLayout());
     add(myMainPanel, BorderLayout.CENTER);
@@ -75,6 +75,9 @@ public class UnchainPanel extends JPanel {
     PsiPackage defaultPackage = JavaPsiFacade.getInstance(myProject).findPackage("");
     final PsiCodeFragment fragment = factory.createReferenceCodeFragment("", defaultPackage, true, true);
     myClassNameField.setDocument(PsiDocumentManager.getInstance(myProject).getDocument(fragment));
+    if (initialClass != null) {
+      myClassNameField.setText(initialClass.getQualifiedName());
+    }
 
     ComponentWithBrowseButton<EditorTextField> classNameWithBrowseButton = new ComponentWithBrowseButton<EditorTextField>(myClassNameField, new ActionListener() {
       @Override
