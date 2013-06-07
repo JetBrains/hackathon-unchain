@@ -100,6 +100,12 @@ public class UnchainPanel extends JPanel {
         }
       }
     });
+    new ComboboxSpeedSearch(myTargetModuleComboBox) {
+      @Override
+      protected String getElementText(Object element) {
+        return element instanceof Module ? ((Module) element).getName() : "";
+      }
+    };
     myGoButton.addActionListener(new ActionListener() {
       @Override
       public void actionPerformed(ActionEvent actionEvent) {
