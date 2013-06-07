@@ -309,9 +309,16 @@ public class UnchainPanel extends JPanel {
 
     if (!failed.get()) {
       myClassNameField.setText("");
-      ((CollectionListModel) myBadDepsList.getModel()).removeAll();
-      ((CollectionListModel) myCallChainList.getModel()).removeAll();
+      clearList(myBadDepsList);
+      clearList(myCallChainList);
       showDepsCard(true);
+    }
+  }
+
+  private void clearList(JBList list) {
+    ListModel model = list.getModel();
+    if (model instanceof CollectionListModel) {
+      ((CollectionListModel) model).removeAll();
     }
   }
 
