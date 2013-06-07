@@ -1,6 +1,6 @@
 <idea-plugin version="2">
   <id>com.jetbrains.unchain</id>
-  <name>Unchain Dependencies</name>
+  <name>Move with Dependencies</name>
   <version>1.0</version>
   <vendor email="yole@jetbrains.com" url="http://www.jetbrains.com">JetBrains</vendor>
 
@@ -14,12 +14,8 @@
   -->
 
   <actions>
-    <action id="Unchain" class="com.jetbrains.unchain.ui.UnchainAction" text="Analyze Dependency Chains">
-        <add-to-group group-id="AnalyzeActions" anchor="last"/>
+    <action id="Unchain" class="com.jetbrains.unchain.ui.UnchainAction" text="Move Class with Transitive Dependencies...">
+        <add-to-group group-id="RefactoringMenu" anchor="after" relative-to-action="Move"/>
     </action>
   </actions>
-
-  <extensions defaultExtensionNs="com.intellij">
-    <!-- Add your extensions here -->
-  </extensions>
 </idea-plugin>

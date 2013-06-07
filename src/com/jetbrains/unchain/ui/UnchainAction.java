@@ -13,7 +13,7 @@ import com.intellij.ui.content.ContentFactory;
  * @author yole
  */
 public class UnchainAction extends AnAction {
-  static final String UNCHAIN_TOOLWINDOW_ID = "Unchain";
+  static final String UNCHAIN_TOOLWINDOW_ID = "Move with Dependencies";
 
   @Override
   public void actionPerformed(AnActionEvent anActionEvent) {
@@ -24,7 +24,7 @@ public class UnchainAction extends AnAction {
     if (toolWindow == null) {
       toolWindow = toolWindowManager.registerToolWindow(UNCHAIN_TOOLWINDOW_ID, false, ToolWindowAnchor.RIGHT);
       ContentFactory contentFactory = toolWindow.getContentManager().getFactory();
-      Content content = contentFactory.createContent(new UnchainPanel(project), "Dependencies", false);
+      Content content = contentFactory.createContent(new UnchainPanel(project), "", false);
       toolWindow.getContentManager().addContent(content);
     }
     toolWindow.activate(null);
