@@ -21,7 +21,10 @@ import com.intellij.openapi.module.Module;
 import com.intellij.openapi.module.ModuleUtil;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.roots.ModuleRootManager;
+import com.intellij.openapi.roots.OrderEnumerator;
+import com.intellij.openapi.roots.ProjectFileIndex;
 import com.intellij.openapi.util.Pair;
+import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.*;
 import com.intellij.psi.search.ProjectScope;
 import com.intellij.psi.util.PsiTreeUtil;
@@ -70,7 +73,12 @@ public class Unchainer {
 
   private void collectAllowedDependencies() {
     myAllowedDependencies.add(myTargetModule);
-    ModuleRootManager.getInstance(myTargetModule).orderEntries().recursively().forEachModule(new Processor<Module>() {
+    OrderEnumerator orderEnumerator = ModuleRootManager.getInstance(myTargetModule).orderEntries();
+    VirtualFile vFile = myPsiClass.getContainingFile().getVirtualFile();
+    if (!ProjectFileIndex.SERVICE.getInstance(myTargetModule.getProject()).isInTestSourceContent(vFile)) {
+      orderEnumerator = orderEnumerator.productionOnly();
+    }
+    orderEnumerator.recursively().forEachModule(new Processor<Module>() {
       @Override
       public boolean process(Module module) {
         myAllowedDependencies.add(module);
@@ -109,7 +117,7 @@ public class Unchainer {
         if (module != null && (module != mySourceModule && !myAllowedDependencies.contains(module) ||
             isUnwantedDependency(dependency))) {
           if (dependency instanceof PsiMember) {
-            while(((PsiMember) dependency).getContainingClass() != null) {
+            while (((PsiMember) dependency).getContainingClass() != null) {
               dependency = ((PsiMember) dependency).getContainingClass();
             }
           }
