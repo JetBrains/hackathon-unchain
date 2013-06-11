@@ -16,6 +16,7 @@
 
 package com.jetbrains.unchain;
 
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.module.ModuleUtil;
 import com.intellij.openapi.project.Project;
@@ -34,6 +35,8 @@ import java.util.*;
  * @author yole
  */
 public class Unchainer {
+  private static final Logger LOG = Logger.getInstance(Unchainer.class);
+
   private final PsiClass myPsiClass;
   private final Module mySourceModule;
   private final Module myTargetModule;
@@ -236,6 +239,10 @@ public class Unchainer {
   private boolean seenAllMembers(String className) {
     Project project = myTargetModule.getProject();
     PsiClass aClass = JavaPsiFacade.getInstance(project).findClass(className, ProjectScope.getProjectScope(project));
+    if (aClass == null) {
+      LOG.error("Could not find class " + className);
+      return false;
+    }
     for (PsiMethod psiMethod : aClass.getMethods()) {
       if (!psiMethod.isConstructor() && !myVisitedNames.contains(PsiQNames.getQName(psiMethod))) {
         return false;

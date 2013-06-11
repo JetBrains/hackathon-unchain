@@ -29,20 +29,12 @@ import com.intellij.util.Function;
 public class PsiQNames {
   public static String getQName(final PsiElement element) {
     if (element instanceof PsiClass) {
-      String qualifiedName = ((PsiClass) element).getQualifiedName();
-      if (qualifiedName != null) {
-        return qualifiedName;
-      }
-      PsiClass topLevelClass = (PsiClass) element;
-      while (PsiTreeUtil.getParentOfType(topLevelClass, PsiClass.class) != null) {
-        topLevelClass = PsiTreeUtil.getParentOfType(topLevelClass, PsiClass.class);
-      }
-      return topLevelClass.getQualifiedName() + "@" + element.getTextRange().getStartOffset();
+      return getClassQName((PsiClass) element);
     }
     if (element instanceof PsiMember) {
       PsiMember member = (PsiMember) element;
       PsiClass containingClass = member.getContainingClass();
-      String qName = containingClass.getQualifiedName() + "#" + member.getName();
+      String qName = getClassQName(containingClass) + "#" + member.getName();
       if (member instanceof PsiMethod) {
         PsiMethod[] methodsByName = containingClass.findMethodsByName(member.getName(), false);
         if (methodsByName.length > 1) {
@@ -52,6 +44,18 @@ public class PsiQNames {
       return qName;
     }
     throw new UnsupportedOperationException("Don't know how to build qname for " + element);
+  }
+
+  private static String getClassQName(PsiClass element) {
+    String qualifiedName = element.getQualifiedName();
+    if (qualifiedName != null) {
+      return qualifiedName;
+    }
+    PsiClass topLevelClass = element;
+    while (PsiTreeUtil.getParentOfType(topLevelClass, PsiClass.class) != null) {
+      topLevelClass = PsiTreeUtil.getParentOfType(topLevelClass, PsiClass.class);
+    }
+    return topLevelClass.getQualifiedName() + "@" + element.getTextRange().getStartOffset();
   }
 
   private static String collectParameterTypes(PsiMethod method) {
