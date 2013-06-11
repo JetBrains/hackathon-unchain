@@ -3,7 +3,7 @@
   <name>Move with Dependencies</name>
   <description>Allows to move a class along with its transitive dependencies to another module and ensures that all
   dependencies of the class being moved are acceptable in the context of the target module.</description>
-  <version>1.0</version>
+  <version>1.0.1</version>
   <vendor email="yole@jetbrains.com" url="http://www.jetbrains.com">JetBrains</vendor>
 
   <!-- please see http://confluence.jetbrains.net/display/IDEADEV/Build+Number+Ranges for description -->
