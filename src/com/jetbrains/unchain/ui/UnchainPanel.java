@@ -82,7 +82,7 @@ public class UnchainPanel extends JPanel {
     setLayout(new BorderLayout());
     add(myMainPanel, BorderLayout.CENTER);
 
-    myBadDepsList.getEmptyText().setText("Select class to analyze and press Go");
+    myBadDepsList.getEmptyText().setText("Select class to analyze and press Analyze Dependencies");
 
     createToolbar();
 
