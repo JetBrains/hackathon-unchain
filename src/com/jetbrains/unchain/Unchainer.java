@@ -48,7 +48,8 @@ public class Unchainer {
   private final Queue<AnalysisItem> myAnalysisQueue = new ArrayDeque<AnalysisItem>();
   private final MultiMap<PsiElement, Pair<PsiElement, List<String>>> myBadDependencies = new MultiMap<PsiElement, Pair<PsiElement, List<String>>>();
   private Runnable myBadDependencyFoundCallback;
-  private List<String> myUnwantedDependencies;
+  private final List<String> myUnwantedDependencies = new ArrayList<String>();
+  private final List<String> myForcedMerges = new ArrayList<String>();
 
   private static class AnalysisItem {
     private final List<String> myCallChain = new ArrayList<String>();
@@ -92,7 +93,13 @@ public class Unchainer {
   }
 
   public void setUnwantedDependencies(List<String> unwantedDependencies) {
-    myUnwantedDependencies = unwantedDependencies;
+    myUnwantedDependencies.clear();
+    myUnwantedDependencies.addAll(unwantedDependencies);
+  }
+
+  public void setForcedMerges(List<String> forcedMerges) {
+    myForcedMerges.clear();
+    myForcedMerges.addAll(forcedMerges);
   }
 
   public void run() {
@@ -153,12 +160,20 @@ public class Unchainer {
     return false;
   }
 
-  private static boolean isNonStaticMember(PsiElement dependency) {
+  private boolean isNonStaticMember(PsiElement dependency) {
     if (dependency instanceof PsiMember) {
       PsiMember member = (PsiMember) dependency;
-      return member.getContainingClass() != null && !member.hasModifierProperty(PsiModifier.STATIC);
+      PsiClass containingClass = member.getContainingClass();
+      return containingClass != null && (isForcedMerge(containingClass) || !member.hasModifierProperty(PsiModifier.STATIC));
     }
     return false;
+  }
+
+  private boolean isForcedMerge(PsiClass psiClass) {
+    while(psiClass.getContainingClass() != null) {
+      psiClass = psiClass.getContainingClass();
+    }
+    return myForcedMerges.contains(psiClass.getQualifiedName());
   }
 
   private void processDependencies(PsiElement element, final PairProcessor<PsiElement, PsiElement> processor) {

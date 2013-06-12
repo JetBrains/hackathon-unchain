@@ -75,6 +75,7 @@ public class UnchainPanel extends JPanel {
   private boolean myBadDepsVisible;
   private boolean myGoodDepsVisible;
   private final List<String> myUnwantedDeps = new ArrayList<String>();
+  private final List<String> myForcedMerges = new ArrayList<String>();
 
   public UnchainPanel(final Project project, final PsiClass initialClass) {
     myProject = project;
@@ -236,6 +237,7 @@ public class UnchainPanel extends JPanel {
   private void runUnchainer(PsiClass psiClass, Module module) {
     final Unchainer unchainer = new Unchainer(psiClass, module);
     unchainer.setUnwantedDependencies(myUnwantedDeps);
+    unchainer.setForcedMerges(myForcedMerges);
     unchainer.setBadDependencyFoundCallback(new Runnable() {
       @Override
       public void run() {
@@ -289,9 +291,8 @@ public class UnchainPanel extends JPanel {
     return JavaPsiFacade.getInstance(myProject).findClass(myClassNameField.getText(), ProjectScope.getProjectScope(myProject));
   }
 
-  private List<String> mergeMembers(List<String> qNames, String selectedMemberQName) {
+  private List<String> mergeMembers(List<String> qNames, String classToMergeQName) {
     List<String> result = new ArrayList<String>();
-    String classToMergeQName = PsiQNames.extractClassName(selectedMemberQName);
     for (String qName : qNames) {
       if (qName.startsWith(classToMergeQName)) {
         if (!result.contains(classToMergeQName)) {
@@ -346,7 +347,11 @@ public class UnchainPanel extends JPanel {
     @Override
     public void actionPerformed(AnActionEvent e) {
       CollectionListModel<String> model = (CollectionListModel<String>) myGoodDepsList.getModel();
-      model.replaceAll(mergeMembers(model.getItems(), (String) myGoodDepsList.getSelectedValue()));
+      String selectedMemberQName = (String) myGoodDepsList.getSelectedValue();
+      String selectedMemberClassName = PsiQNames.extractClassName(selectedMemberQName);
+      myForcedMerges.add(selectedMemberClassName);
+      model.replaceAll(mergeMembers(model.getItems(), selectedMemberClassName));
+      runUnchainer();
     }
 
     @Override
