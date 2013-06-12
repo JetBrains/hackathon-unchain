@@ -134,12 +134,14 @@ public class Unchainer {
           myBadDependencies.putValue(dependency, Pair.create(referencingElement, item.myCallChain));
         }
         else if (module == mySourceModule) {
-          if (isNonStaticMember(dependency)) {
-            myAnalysisQueue.offer(new AnalysisItem(((PsiMember) dependency).getContainingClass(), item));
+          PsiElement toOffer = dependency;
+          if (dependency instanceof PsiMember && isForcedMerge(((PsiMember) dependency))) {
+            toOffer = PsiTreeUtil.getTopmostParentOfType(dependency, PsiClass.class);
           }
-          else {
-            myAnalysisQueue.offer(new AnalysisItem(dependency, item));
+          else if (isNonStaticMember(dependency)) {
+            toOffer = ((PsiMember) dependency).getContainingClass();
           }
+          myAnalysisQueue.offer(new AnalysisItem(toOffer, item));
         }
         return true;
       }
@@ -169,11 +171,9 @@ public class Unchainer {
     return false;
   }
 
-  private boolean isForcedMerge(PsiClass psiClass) {
-    while(psiClass.getContainingClass() != null) {
-      psiClass = psiClass.getContainingClass();
-    }
-    return myForcedMerges.contains(psiClass.getQualifiedName());
+  private boolean isForcedMerge(PsiMember psiMember) {
+    PsiClass psiClass = PsiTreeUtil.getTopmostParentOfType(psiMember, PsiClass.class);
+    return psiClass != null && myForcedMerges.contains(psiClass.getQualifiedName());
   }
 
   private void processDependencies(PsiElement element, final PairProcessor<PsiElement, PsiElement> processor) {
