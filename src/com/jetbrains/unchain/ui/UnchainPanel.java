@@ -285,6 +285,9 @@ public class UnchainPanel extends JPanel {
 
   private void fillBadDependenciesList(Unchainer unchainer) {
     myBadDepsList.setModel(new CollectionListModel<BadDependencyItem>(unchainer.getBadDependencies()));
+    if (myBadDepsList.getItemsCount() > 0) {
+      myBadDepsList.setSelectedIndex(0);
+    }
   }
 
   private PsiClass getSelectedClass() {
